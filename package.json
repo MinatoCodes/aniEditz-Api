@@ -1,15 +1,22 @@
 {
-  "name": "instagram-random-video-api",
+  "name": "aniedit-api",
   "version": "1.0.0",
-  "description": "API to get a random video URL from a random Instagram user",
+  "description": "API that returns a random Instagram post from anime editors",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
-  "author": "YourName",
-  "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "node-fetch": "^2.6.7"
-  }
+    "axios": "^1.6.8",
+    "cheerio": "^1.0.0-rc.12",
+    "express": "^4.19.2"
+  },
+  "keywords": [
+    "instagram",
+    "scraper",
+    "api",
+    "anime edits"
+  ],
+  "author": "MinatoCodes",
+  "license": "MIT"
 }
