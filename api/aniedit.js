@@ -1,5 +1,6 @@
-const express = require("express");
-const axios = require("axios");
+require('dotenv').config();
+const express = require('express');
+const axios = require('axios');
 const app = express();
 
 const PORT = process.env.PORT || 3000;
@@ -18,76 +19,53 @@ const usernames = [
   "unqfx"
 ];
 
-// Simple in-memory cache: { username: { timestamp, videos: [] } }
-const cache = {};
-const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in ms
-
 async function fetchVideos(username) {
-  const now = Date.now();
-
-  // Return cache if valid
-  if (cache[username] && now - cache[username].timestamp < CACHE_DURATION) {
-    return cache[username].videos;
-  }
-
   try {
-    const options = {
-      method: "GET",
-      url: "https://instagram-scraper-api2.p.rapidapi.com/v1/profile",
-      params: { username },
-      headers: {
-        "X-RapidAPI-Key": "79964fe645msh67fc7c7871bb265p1bfb72jsn1fd710710b56",
-        "X-RapidAPI-Host": "instagram-scraper-api2.p.rapidapi.com"
+    const response = await axios.get(`https://api.scrapingdog.com/instagram/profile`, {
+      params: {
+        api_key: process.env.SCRAPINGDOG_KEY,
+        username
       }
-    };
+    });
 
-    const response = await axios.request(options);
+    const posts = response.data.posts || [];
 
-    const posts = response.data.data.edge_owner_to_timeline_media.edges;
+    // Filter only video posts if available
+    const videoPosts = posts
+      .filter(post => post.is_video || post.type === "video")
+      .map(post => post.link);
 
-    const videoUrls = posts
-      .filter(post => post.node.is_video)
-      .map(post => `https://www.instagram.com/p/${post.node.shortcode}/`);
-
-    // Cache result
-    cache[username] = {
-      timestamp: now,
-      videos: videoUrls
-    };
-
-    return videoUrls;
+    return videoPosts;
 
   } catch (error) {
-    console.error(`Failed to fetch videos for ${username}`, error.message);
+    console.error(`❌ Error fetching videos for ${username}: ${error.message}`);
     return [];
   }
 }
 
-app.get("/api/aniedit", async (req, res) => {
-  let username = req.query.username;
+async function findRandomVideoFromAllUsers() {
+  const shuffledUsernames = usernames
+    .map(u => ({ u, sort: Math.random() }))
+    .sort((a, b) => a.sort - b.sort)
+    .map(({ u }) => u);
 
-  if (username && !usernames.includes(username)) {
-    return res.status(400).json({ error: "Username not in the supported list." });
+  for (const username of shuffledUsernames) {
+    const videos = await fetchVideos(username);
+    if (videos.length > 0) {
+      const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+      return { username, videoUrl: randomVideo };
+    }
   }
+  return null;
+}
 
-  // Pick random username if none provided
-  if (!username) {
-    username = usernames[Math.floor(Math.random() * usernames.length)];
+app.get("/api/randomanimeedit", async (req, res) => {
+  const result = await findRandomVideoFromAllUsers();
+  if (!result) {
+    return res.json({ message: "No video posts found for any user." });
   }
-
-  const videos = await fetchVideos(username);
-
-  if (videos.length === 0) {
-    return res.json({ message: `No video posts found for user ${username}.` });
-  }
-
-  const randomVideo = videos[Math.floor(Math.random() * videos.length)];
-
-  res.json({
-    username,
-    videoUrl: randomVideo
-  });
+  res.json(result);
 });
 
-app.listen(PORT, () => console.log(`API running on port ${PORT}`));
-  
+app.listen(PORT, () => console.log(`✅ API running on port ${PORT}`));
+                                            
