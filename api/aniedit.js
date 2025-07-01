@@ -6,16 +6,9 @@ const app = express();
 const apiKey = "6864302867e15daf6b60779c";
 const usernames = [
   "molob",
-  "suhardfx",
   "7vv1s",
   "fxsharkk",
-  "aeno.edits",
-  "killua.ae",
-  "zerowxz",
-  "kayfxs",
-  "nobitafx",
-  "nexx.editz",
-  "unqfx"
+  "killua.ae"
 ];
 
 app.get("/api/random-video", async (req, res) => {
