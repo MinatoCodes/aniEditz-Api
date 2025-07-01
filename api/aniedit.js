@@ -3,7 +3,7 @@ const fetch = require("node-fetch"); // npm i node-fetch@2
 
 const app = express();
 
-const apiKey = "6864302867e15daf6b60779c";
+const apiKey = "686441d233fd593448eedc29";
 const usernames = [
   "molob",
   "killua.ae", 
