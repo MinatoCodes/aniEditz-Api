@@ -1,10 +1,9 @@
-require('dotenv').config();
-const express = require('express');
-const axios = require('axios');
+const express = require("express");
+const fetch = require("node-fetch"); // npm i node-fetch@2
+
 const app = express();
 
-const PORT = process.env.PORT || 3000;
-
+const apiKey = "6864302867e15daf6b60779c";
 const usernames = [
   "molob",
   "suhardfx",
@@ -19,53 +18,52 @@ const usernames = [
   "unqfx"
 ];
 
-async function fetchVideos(username) {
+app.get("/api/random-video", async (req, res) => {
   try {
-    const response = await axios.get(`https://api.scrapingdog.com/instagram/profile`, {
-      params: {
-        api_key: process.env.SCRAPINGDOG_KEY,
+    // Pick random username
+    const username = usernames[Math.floor(Math.random() * usernames.length)];
+
+    // Call scrapingdog API for this username
+    const url = `https://api.scrapingdog.com/instagram/profile?api_key=${apiKey}&username=${username}`;
+    const response = await fetch(url);
+    const data = await response.json();
+
+    // Check if data and videos exist
+    const videos = data.owner_to_timeline_media?.media?.filter(m => m.is_video);
+
+    if (!videos || videos.length === 0) {
+      return res.status(404).json({
+        error: "No videos found for this user",
         username
-      }
-    });
-
-    const posts = response.data.posts || [];
-
-    // Filter only video posts if available
-    const videoPosts = posts
-      .filter(post => post.is_video || post.type === "video")
-      .map(post => post.link);
-
-    return videoPosts;
-
-  } catch (error) {
-    console.error(`❌ Error fetching videos for ${username}: ${error.message}`);
-    return [];
-  }
-}
-
-async function findRandomVideoFromAllUsers() {
-  const shuffledUsernames = usernames
-    .map(u => ({ u, sort: Math.random() }))
-    .sort((a, b) => a.sort - b.sort)
-    .map(({ u }) => u);
-
-  for (const username of shuffledUsernames) {
-    const videos = await fetchVideos(username);
-    if (videos.length > 0) {
-      const randomVideo = videos[Math.floor(Math.random() * videos.length)];
-      return { username, videoUrl: randomVideo };
+      });
     }
-  }
-  return null;
-}
 
-app.get("/api/randomanimeedit", async (req, res) => {
-  const result = await findRandomVideoFromAllUsers();
-  if (!result) {
-    return res.json({ message: "No video posts found for any user." });
+    // Pick random video
+    const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+
+    // Extract video URL
+    const videoUrl = randomVideo.video_url || randomVideo.display_url || null;
+
+    if (!videoUrl) {
+      return res.status(404).json({
+        error: "Video URL not found in selected media",
+        username
+      });
+    }
+
+    // Return username and video URL
+    res.json({
+      username,
+      video_url: videoUrl,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Internal server error" });
   }
-  res.json(result);
 });
 
-app.listen(PORT, () => console.log(`✅ API running on port ${PORT}`));
-                                            
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+  
